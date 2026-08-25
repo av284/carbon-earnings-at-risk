@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carbon Earnings-at-Risk Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-black text-white font-sans antialiased">
     <div class="flex min-h-screen">
@@ -48,107 +47,117 @@
                 <p class="text-sm text-zinc-400 mt-1">Quantifying corporate EBITDA margin erosion across NGFS carbon tax trajectories ($0–$250/tCO2e).</p>
             </div>
 
-            <!-- Metric Cards -->
+            <!-- Dynamic Metric Cards -->
             <div class="grid grid-cols-4 gap-4">
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
                     <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Baseline EBITDA</span>
-                    <div id="baseEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">--</div>
+                    <div id="baseEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
                     <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Net Carbon Cost</span>
-                    <div id="netCostCard" class="text-2xl font-semibold text-red-400 mt-2">--</div>
+                    <div id="netCostCard" class="text-2xl font-semibold text-red-400 mt-2">-$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
                     <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Post-Tax EBITDA</span>
-                    <div id="postEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">--</div>
+                    <div id="postEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
                     <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">EBITDA Erosion</span>
-                    <div id="erosionCard" class="text-2xl font-semibold text-amber-400 mt-2">--</div>
+                    <div id="erosionCard" class="text-2xl font-semibold text-amber-400 mt-2">0%</div>
                 </div>
             </div>
 
+            <!-- Chart Area -->
             <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-6">
                 <h3 id="chartTitle" class="text-sm font-semibold text-zinc-300 mb-6">EBITDA Trajectory Analysis</h3>
-                <div id="chartPlot" class="w-full flex justify-center"></div>
+                <div class="h-72">
+                    <canvas id="trajectoryChart"></canvas>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Python runtime inside the browser -->
-    <script type="py" config='{"packages": ["pandas", "matplotlib"]}'>
-from js import document
-from pyodide.ffi import create_proxy
-import matplotlib.pyplot as plt
-import io, base64
+    <script>
+        const COMPANY_DATA = {
+            "ExxonMobil (XOM)": { sector: "Energy", scope1: 91000000, scope2: 9000000, ebitda_m: 67940 },
+            "Tesla Inc. (TSLA)": { sector: "Automotive", scope1: 302000, scope2: 754000, ebitda_m: 10760 },
+            "Amazon.com (AMZN)": { sector: "Consumer Discretionary", scope1: 15130000, scope2: 2800000, ebitda_m: 168910 },
+            "American Airlines (AAL)": { sector: "Industrials", scope1: 39946681, scope2: 128153, ebitda_m: 3370 }
+        };
 
-COMPANY_DATA = {
-    "ExxonMobil (XOM)": {"sector": "Energy", "scope1": 91_000_000, "scope2": 9_000_000, "ebitda_m": 67_940},
-    "Tesla Inc. (TSLA)": {"sector": "Automotive", "scope1": 302_000, "scope2": 754_000, "ebitda_m": 10_760},
-    "Amazon.com (AMZN)": {"sector": "Consumer Discretionary", "scope1": 15_130_000, "scope2": 2_800_000, "ebitda_m": 168_910},
-    "American Airlines (AAL)": {"sector": "Industrials", "scope1": 39_946_681, "scope2": 128_153, "ebitda_m": 3_370},
-}
+        const equitySelect = document.getElementById('equitySelect');
+        const taxInput = document.getElementById('taxInput');
+        const passInput = document.getElementById('passInput');
+        let chart;
 
-def fmt_musd(value_m: float) -> str:
-    if abs(value_m) >= 1_000:
-        return f"${value_m / 1_000:,.2f}B"
-    return f"${value_m:,.1f}M"
+        function fmtMusd(valM) {
+            const absVal = Math.abs(valM);
+            if (absVal >= 1000) {
+                return `$${(valM / 1000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
+            }
+            return `$${valM.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
+        }
 
-def update_dashboard(event=None):
-    company_choice = document.getElementById("equitySelect").value
-    carbon_tax = float(document.getElementById("taxInput").value)
-    pass_through = float(document.getElementById("passInput").value) / 100.0
+        function updateDashboard() {
+            const comp = COMPANY_DATA[equitySelect.value];
+            const carbonTax = parseFloat(taxInput.value);
+            const passThrough = parseFloat(passInput.value) / 100.0;
 
-    document.getElementById("taxVal").innerText = f"${int(carbon_tax)}"
-    document.getElementById("passVal").innerText = f"{int(pass_through * 100)}%"
+            document.getElementById('taxVal').innerText = `$${carbonTax}`;
+            document.getElementById('passVal').innerText = `${passInput.value}%`;
 
-    comp = COMPANY_DATA[company_choice]
-    total_emissions = comp["scope1"] + comp["scope2"]
-    gross_carbon_cost_m = (total_emissions * carbon_tax) / 1_000_000
-    net_carbon_cost_m = gross_carbon_cost_m * (1.0 - pass_through)
-    post_tax_ebitda_m = max(0.0, comp["ebitda_m"] - net_carbon_cost_m)
-    ebitda_erosion_pct = (net_carbon_cost_m / comp["ebitda_m"]) * 100.0
+            const totalEmissions = comp.scope1 + comp.scope2;
+            const grossCarbonCostM = (totalEmissions * carbonTax) / 1000000;
+            const netCarbonCostM = grossCarbonCostM * (1.0 - passThrough);
+            const postTaxEbitdaM = Math.max(0.0, comp.ebitda_m - netCarbonCostM);
+            const ebitdaErosionPct = (netCarbonCostM / comp.ebitda_m) * 100.0;
 
-    document.getElementById("baseEbitdaCard").innerText = fmt_musd(comp["ebitda_m"])
-    document.getElementById("netCostCard").innerText = f"-{fmt_musd(net_carbon_cost_m)}"
-    document.getElementById("postEbitdaCard").innerText = fmt_musd(post_tax_ebitda_m)
-    document.getElementById("erosionCard").innerText = f"{ebitda_erosion_pct:.1f}%"
-    document.getElementById("chartTitle").innerText = f"EBITDA Trajectory Analysis — {company_choice}"
+            document.getElementById('baseEbitdaCard').innerText = fmtMusd(comp.ebitda_m);
+            document.getElementById('netCostCard').innerText = `-${fmtMusd(netCarbonCostM)}`;
+            document.getElementById('postEbitdaCard').innerText = fmtMusd(postTaxEbitdaM);
+            document.getElementById('erosionCard').innerText = `${ebitdaErosionPct.toFixed(1)}%`;
+            document.getElementById('chartTitle').innerText = `EBITDA Trajectory Analysis — ${equitySelect.value}`;
 
-    # Render Matplotlib Chart
-    prices = list(range(0, 260, 25))
-    remaining_ebitda = []
-    for p in prices:
-        cost = ((total_emissions * p) / 1_000_000) * (1.0 - pass_through)
-        remaining_ebitda.append(max(0.0, comp["ebitda_m"] - cost))
+            const labels = [];
+            const data = [];
+            for (let p = 0; p <= 250; p += 25) {
+                labels.push(`$${p}`);
+                const cost = ((totalEmissions * p) / 1000000) * (1.0 - passThrough);
+                data.push(Math.max(0.0, comp.ebitda_m - cost));
+            }
 
-    plt.close('all')
-    fig, ax = plt.subplots(figsize=(9, 3.5), facecolor='black')
-    ax.set_facecolor('black')
-    
-    ax.plot(prices, remaining_ebitda, color='#10b981', linewidth=2)
-    ax.fill_between(prices, remaining_ebitda, color='#10b981', alpha=0.15)
-    
-    ax.tick_params(colors='#71717a', labelsize=9)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#27272a')
-    ax.spines['bottom'].set_color('#27272a')
-    ax.grid(True, color='#27272a', linestyle='--', linewidth=0.5)
+            if (chart) chart.destroy();
+            const ctx = document.getElementById('trajectoryChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Remaining EBITDA ($M)',
+                        data: data,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        fill: true,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#27272a' }, ticks: { color: '#71717a' } },
+                        y: { grid: { color: '#27272a' }, ticks: { color: '#71717a' } }
+                    }
+                }
+            });
+        }
 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
-    buf.seek(0)
-    img_str = base64.b64encode(buf.read()).decode('utf-8')
-    
-    document.getElementById("chartPlot").innerHTML = f'<img src="data:image/png;base64,{img_str}" class="max-w-full h-auto"/>'
+        equitySelect.addEventListener('change', updateDashboard);
+        taxInput.addEventListener('input', updateDashboard);
+        passInput.addEventListener('input', updateDashboard);
 
-proxy = create_proxy(update_dashboard)
-document.getElementById("equitySelect").addEventListener("change", proxy)
-document.getElementById("taxInput").addEventListener("input", proxy)
-document.getElementById("passInput").addEventListener("input", proxy)
-
-update_dashboard()
+        updateDashboard();
     </script>
 </body>
 </html>
