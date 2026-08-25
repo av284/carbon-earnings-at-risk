@@ -5,36 +5,9 @@ import numpy as np
 # Page configuration
 st.set_page_config(page_title="Carbon Earnings-at-Risk Dashboard", layout="wide")
 
-# Hide Streamlit watermark, footer, and top menu
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            .stAppViewerFooter {display: none;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
-
 st.title("Carbon Earnings-at-Risk Dashboard")
 st.caption("Quantifying corporate EBITDA margin erosion across NGFS carbon tax trajectories ($0–$250/tCO2e).")
 
-# Baseline Corporate Financial Database (Scope 1, Scope 2 in metric tons CO2e, Baseline EBITDA in $M)
-#
-# Sources (as of Aug 2026):
-# - ExxonMobil: Scope 1/2 from ExxonMobil 2024 Sustainability/Metrics & Data disclosure
-#   (91M t Scope 1 + 9M t Scope 2). EBITDA ~ FY2025 reported EBITDA (~$68B, varies ~$64-70B by provider).
-# - Tesla: Scope 1/2 from Tesla 2024 Impact Report, operational emissions
-#   (302k t Scope 1 + 754k t Scope 2). EBITDA ~ FY2025 GAAP-basis EBITDA (~$11.8B).
-#   Note: Tesla's non-GAAP "Adjusted EBITDA" runs higher (~$15-17B TTM) - GAAP EBITDA used here for consistency.
-# - Amazon: Scope 1/2 from Amazon 2024 Sustainability Report (market-based Scope 2 method, which
-#   Amazon itself uses: 15.13M t Scope 1 + 2.80M t Scope 2). EBITDA = FY2025 reported EBITDA (~$165.3B).
-# - American Airlines Group: Scope 1/2 from AAL 2024 GHG disclosure (39.95M t Scope 1 + 128k t Scope 2,
-#   market-based). EBITDA estimated from FY2025 operating income + D&A (~$5.1B) given weak 2025 results
-#   (TTM EBITDA has since compressed further due to fuel-cost pressure in 2026).
-#
-# EBITDA figures vary by data provider (GAAP vs. adjusted, fiscal-year vs. trailing-twelve-month) —
-# treat these as reasonable midpoint estimates, not exact 10-K line items.
 COMPANY_DATA = {
     "ExxonMobil (XOM)": {"sector": "Energy", "scope1": 91_000_000, "scope2": 9_000_000, "ebitda_m": 67_940},
     "Tesla Inc. (TSLA)": {"sector": "Automotive", "scope1": 302_000, "scope2": 754_000, "ebitda_m": 10_760},
