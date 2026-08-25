@@ -15,7 +15,7 @@
             
             <div>
                 <label class="block text-xs text-zinc-400 mb-2">Select Equity</label>
-                <select id="equitySelect" class="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-200 focus:outline-none">
+                <select id="equitySelect" class="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-200 focus:outline-none border-zinc-700">
                     <option value="ExxonMobil (XOM)">ExxonMobil (XOM)</option>
                     <option value="Tesla Inc. (TSLA)">Tesla Inc. (TSLA)</option>
                     <option value="Amazon.com (AMZN)">Amazon.com (AMZN)</option>
@@ -40,29 +40,29 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Main Content Area -->
         <main class="flex-1 p-8 space-y-8 bg-black">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight text-zinc-50">Carbon Earnings-at-Risk Dashboard</h1>
                 <p class="text-sm text-zinc-400 mt-1">Quantifying corporate EBITDA margin erosion across NGFS carbon tax trajectories ($0–$250/tCO2e).</p>
             </div>
 
-            <!-- Metric Cards -->
+            <!-- Dynamic Metric Cards -->
             <div class="grid grid-cols-4 gap-4">
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
-                    <span class="text-xs text-zinc-500 uppercase font-medium">Baseline EBITDA</span>
+                    <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Baseline EBITDA</span>
                     <div id="baseEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
-                    <span class="text-xs text-zinc-500 uppercase font-medium">Net Carbon Cost</span>
+                    <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Net Carbon Cost</span>
                     <div id="netCostCard" class="text-2xl font-semibold text-red-400 mt-2">-$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
-                    <span class="text-xs text-zinc-500 uppercase font-medium">Post-Tax EBITDA</span>
+                    <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">Post-Tax EBITDA</span>
                     <div id="postEbitdaCard" class="text-2xl font-semibold text-zinc-100 mt-2">$0M</div>
                 </div>
                 <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5">
-                    <span class="text-xs text-zinc-500 uppercase font-medium">EBITDA Erosion</span>
+                    <span class="text-xs text-zinc-500 uppercase tracking-wider font-medium">EBITDA Erosion</span>
                     <div id="erosionCard" class="text-2xl font-semibold text-amber-400 mt-2">0%</div>
                 </div>
             </div>
@@ -78,18 +78,27 @@
     </div>
 
     <script>
+        // Baseline Corporate Financial Database (Scope 1, Scope 2 in tCO2e, EBITDA in $M)
         const COMPANY_DATA = {
-            "ExxonMobil (XOM)": { scope1: 110000000, scope2: 9000000, ebitda_m: 55400 },
-            "Tesla Inc. (TSLA)": { scope1: 400000, scope2: 800000, ebitda_m: 14900 },
-            "Amazon.com (AMZN)": { scope1: 12800000, scope2: 4200000, ebitda_m: 85500 },
-            "American Airlines (AAL)": { scope1: 34000000, scope2: 500000, ebitda_m: 5300 }
+            "ExxonMobil (XOM)": { sector: "Energy", scope1: 91000000, scope2: 9000000, ebitda_m: 67940 },
+            "Tesla Inc. (TSLA)": { sector: "Automotive", scope1: 302000, scope2: 754000, ebitda_m: 10760 },
+            "Amazon.com (AMZN)": { sector: "Consumer Discretionary", scope1: 15130000, scope2: 2800000, ebitda_m: 168910 },
+            "American Airlines (AAL)": { sector: "Industrials", scope1: 39946681, scope2: 128153, ebitda_m: 3370 }
         };
 
         const equitySelect = document.getElementById('equitySelect');
         const taxInput = document.getElementById('taxInput');
         const passInput = document.getElementById('passInput');
-        
         let chart;
+
+        // Formatter function matching Colab logic
+        function fmtMusd(valM) {
+            const absVal = Math.abs(valM);
+            if (absVal >= 1000) {
+                return `$${(valM / 1000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
+            }
+            return `$${valM.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
+        }
 
         function updateDashboard() {
             const comp = COMPANY_DATA[equitySelect.value];
@@ -100,23 +109,23 @@
             document.getElementById('passVal').innerText = `${passInput.value}%`;
 
             const totalEmissions = comp.scope1 + comp.scope2;
-            const grossCost = (totalEmissions * carbonTax) / 1000000;
-            const netCost = grossCost * (1.0 - passThrough);
-            const postEbitda = Math.max(0.0, comp.ebitda_m - netCost);
-            const erosionPct = (netCost / comp.ebitda_m) * 100.0;
+            const grossCarbonCostM = (totalEmissions * carbonTax) / 1000000;
+            const netCarbonCostM = grossCarbonCostM * (1.0 - passThrough);
+            const postTaxEbitdaM = Math.max(0.0, comp.ebitda_m - netCarbonCostM);
+            const ebitdaErosionPct = (netCarbonCostM / comp.ebitda_m) * 100.0;
 
-            document.getElementById('baseEbitdaCard').innerText = `$${comp.ebitda_m.toLocaleString()}M`;
-            document.getElementById('netCostCard').innerText = `-$${netCost.toLocaleString(undefined, {maximumFractionDigits: 1})}M`;
-            document.getElementById('postEbitdaCard').innerText = `$${postEbitda.toLocaleString(undefined, {maximumFractionDigits: 1})}M`;
-            document.getElementById('erosionCard').innerText = `${erosionPct.toFixed(1)}%`;
+            document.getElementById('baseEbitdaCard').innerText = fmtMusd(comp.ebitda_m);
+            document.getElementById('netCostCard').innerText = `-${fmtMusd(netCarbonCostM)}`;
+            document.getElementById('postEbitdaCard').innerText = fmtMusd(postTaxEbitdaM);
+            document.getElementById('erosionCard').innerText = `${ebitdaErosionPct.toFixed(1)}%`;
             document.getElementById('chartTitle').innerText = `EBITDA Trajectory Analysis — ${equitySelect.value}`;
 
             const labels = [];
             const data = [];
             for (let p = 0; p <= 250; p += 25) {
                 labels.push(`$${p}`);
-                const c = ((totalEmissions * p) / 1000000) * (1.0 - passThrough);
-                data.push(Math.max(0.0, comp.ebitda_m - c));
+                const cost = ((totalEmissions * p) / 1000000) * (1.0 - passThrough);
+                data.push(Math.max(0.0, comp.ebitda_m - cost));
             }
 
             if (chart) chart.destroy();
