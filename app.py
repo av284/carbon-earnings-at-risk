@@ -5,6 +5,17 @@ import numpy as np
 # Page configuration
 st.set_page_config(page_title="Carbon Earnings-at-Risk Dashboard", layout="wide")
 
+# Hide Streamlit watermark, footer, and top menu
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .stAppViewerFooter {display: none;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 st.title("Carbon Earnings-at-Risk Dashboard")
 st.caption("Quantifying corporate EBITDA margin erosion across NGFS carbon tax trajectories ($0–$250/tCO2e).")
 
