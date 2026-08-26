@@ -141,13 +141,10 @@ async def calculate(data: CalcRequest):
     gross_carbon_cost_m = (total_emissions * data.tax) / 1_000_000
     net_carbon_cost_m = gross_carbon_cost_m * (1.0 - pass_through)
     
-    # Negative values are now permitted here
     post_tax_ebitda_m = comp["ebitda_m"] - net_carbon_cost_m
     ebitda_erosion_pct = (net_carbon_cost_m / comp["ebitda_m"]) * 100.0
 
     prices = list(range(0, 260, 25))
-    
-    # Negative values are now permitted across the chart trajectory points
     remaining_ebitda = [
         comp["ebitda_m"] - (((total_emissions * p) / 1_000_000) * (1.0 - pass_through)) 
         for p in prices
@@ -161,6 +158,10 @@ async def calculate(data: CalcRequest):
     
     # Add a horizontal insolvency threshold line at y=0
     ax.axhline(0, color='#ef4444', linestyle='--', linewidth=0.8, alpha=0.7)
+
+    # Added Axis Labels
+    ax.set_xlabel("Carbon Tax Rate ($/tCO2e)", color='#a1a1aa', fontsize=9, labelpad=8)
+    ax.set_ylabel("Remaining EBITDA ($M)", color='#a1a1aa', fontsize=9, labelpad=8)
 
     ax.tick_params(colors='#71717a', labelsize=9)
     ax.spines['top'].set_visible(False)
