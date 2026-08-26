@@ -140,17 +140,28 @@ async def calculate(data: CalcRequest):
     
     gross_carbon_cost_m = (total_emissions * data.tax) / 1_000_000
     net_carbon_cost_m = gross_carbon_cost_m * (1.0 - pass_through)
-    post_tax_ebitda_m = max(0.0, comp["ebitda_m"] - net_carbon_cost_m)
+    
+    # Negative values are now permitted here
+    post_tax_ebitda_m = comp["ebitda_m"] - net_carbon_cost_m
     ebitda_erosion_pct = (net_carbon_cost_m / comp["ebitda_m"]) * 100.0
 
     prices = list(range(0, 260, 25))
-    remaining_ebitda = [max(0.0, comp["ebitda_m"] - (((total_emissions * p) / 1_000_000) * (1.0 - pass_through))) for p in prices]
+    
+    # Negative values are now permitted across the chart trajectory points
+    remaining_ebitda = [
+        comp["ebitda_m"] - (((total_emissions * p) / 1_000_000) * (1.0 - pass_through)) 
+        for p in prices
+    ]
 
     plt.close('all')
     fig, ax = plt.subplots(figsize=(8.5, 3.5), facecolor='#09090b')
     ax.set_facecolor('#09090b')
     ax.plot(prices, remaining_ebitda, color='#10b981', linewidth=2)
     ax.fill_between(prices, remaining_ebitda, color='#10b981', alpha=0.15)
+    
+    # Add a horizontal insolvency threshold line at y=0
+    ax.axhline(0, color='#ef4444', linestyle='--', linewidth=0.8, alpha=0.7)
+
     ax.tick_params(colors='#71717a', labelsize=9)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
