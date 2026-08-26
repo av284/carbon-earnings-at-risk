@@ -90,6 +90,15 @@ HTML_CONTENT = """
                 <h3 id="chartTitle" class="text-sm font-semibold text-zinc-300 mb-6">EBITDA Trajectory Analysis</h3>
                 <div id="chartContainer" class="w-full flex justify-center"></div>
             </div>
+
+            <!-- Description / Guide Card placed directly below the chart -->
+            <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5 flex flex-col space-y-2">
+                <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Model Methodology & Threshold Guide</h4>
+                <p class="text-xs text-zinc-400 leading-relaxed">
+                    The trajectory curve maps projected <strong>Remaining EBITDA</strong> as carbon tax rates escalate from $0 to $250/tCO$_2$e, factoring in corporate emissions and the selected consumer pass-through rate. 
+                    The <span class="text-red-400 font-semibold">red dashed line ($y = 0$)</span> represents the <strong>Corporate Insolvency Threshold</strong>—crossing below this line indicates that net carbon liabilities completely wipe out operating earnings.
+                </p>
+            </div>
         </main>
     </div>
 
