@@ -91,12 +91,10 @@ HTML_CONTENT = """
                 <div id="chartContainer" class="w-full flex justify-center"></div>
             </div>
 
-            <!-- Description / Guide Card placed directly below the chart -->
             <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-5 flex flex-col space-y-2">
-                <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Model Methodology & Threshold Guide</h4>
+                <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">How to read this chart</h4>
                 <p class="text-xs text-zinc-400 leading-relaxed">
-                    The trajectory curve maps projected <strong>Remaining EBITDA</strong> as carbon tax rates escalate from $0 to $250/tCO$_2$e, factoring in corporate emissions and the selected consumer pass-through rate. 
-                    The <span class="text-red-400 font-semibold">red dashed line ($y = 0$)</span> represents the <strong>Corporate Insolvency Threshold</strong>—crossing below this line indicates that net carbon liabilities completely wipe out operating earnings.
+                    The green line tracks remaining EBITDA as carbon taxes increase from $0 to $250 per ton, taking into account company emissions and consumer pass-through rates. The red dashed line marks zero profit. When the green line drops below it, carbon costs exceed total earnings and push the company into a negative financial deficit.
                 </p>
             </div>
         </main>
@@ -165,10 +163,8 @@ async def calculate(data: CalcRequest):
     ax.plot(prices, remaining_ebitda, color='#10b981', linewidth=2)
     ax.fill_between(prices, remaining_ebitda, color='#10b981', alpha=0.15)
     
-    # Add a horizontal insolvency threshold line at y=0
     ax.axhline(0, color='#ef4444', linestyle='--', linewidth=0.8, alpha=0.7)
 
-    # Added Axis Labels
     ax.set_xlabel("Carbon Tax Rate ($/tCO2e)", color='#a1a1aa', fontsize=9, labelpad=8)
     ax.set_ylabel("Remaining EBITDA ($M)", color='#a1a1aa', fontsize=9, labelpad=8)
 
